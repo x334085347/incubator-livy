@@ -82,11 +82,11 @@ public class LogManager {
         isOperationLogEnabled = rscConf.getBoolean(RSCConf.Entry.LOGGING_OPERATION_ENABLED) && new File(operationLogLocation).isDirectory();
         numRetainedStatements = rscConf.getInt(RSCConf.Entry.RETAINED_STATEMENTS);
         String logLevel = rscConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL);
-        hiveConf = new HiveConf();
-        hiveConf.setBoolVar(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_ENABLED, isOperationLogEnabled);
-        hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LOG_LOCATION.varname, operationLogLocation);
-        hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LEVEL.varname, logLevel);
         if(isOperationLogEnabled){
+            hiveConf = new HiveConf();
+            hiveConf.setBoolVar(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_ENABLED, isOperationLogEnabled);
+            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LOG_LOCATION.varname, operationLogLocation);
+            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LEVEL.varname, logLevel);
             File rootDir = new File(this.rootDirPath);
             if (!rootDir.exists()) {
                 rootDir.mkdir();
