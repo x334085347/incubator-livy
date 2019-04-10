@@ -69,8 +69,8 @@ class ReplDriver(conf: SparkConf, livyConf: RSCConf)
 
   def handle(ctx: ChannelHandlerContext, msg: BaseProtocol.GetJobLog): ReplJobResults = {
     val statements = session.statements.get(msg.id.toInt)
-    val output = session.readLog(msg.id.toInt, msg.size).map( x ⇒ s""""${Joiner.on("\n").join(x.iterator())} """" ).getOrElse("")
-    val resultStatements = statements.map{ item ⇒
+    val output = session.readLog(msg.id.toInt, msg.size).map( x => s""""${Joiner.on("\n").join(x.iterator())} """" ).getOrElse("")
+    val resultStatements = statements.map{ item =>
       val newStat = new Statement(item.id, item.code, item.state.get(), output)
       newStat.updateProgress(item.progress)
       newStat
