@@ -153,7 +153,7 @@ class InteractiveSessionServlet(
       val statementId = params("statementId")
       val size = params.get("size").map(_.toInt).getOrElse(50)
       Map(
-        "statements" -> session.getStatementLog(statementId , size)
+        "statements" -> session.getStatementLog(statementId, size)
       )
     }
   }

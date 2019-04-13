@@ -29,8 +29,8 @@ import org.json4s.jackson.JsonMethods.parse
 import org.scalatest.concurrent.Eventually._
 
 import org.apache.livy.rsc.driver.StatementState
-import org.apache.livy.sessions._
 import org.apache.livy.rsc.RSCConf
+import org.apache.livy.sessions._
 
 class SparkSessionSpec extends BaseSessionSpec(Spark) {
 
@@ -291,7 +291,7 @@ class SparkSessionSpec extends BaseSessionSpec(Spark) {
 
     val stmtId = session.execute(executeCode)
     eventually(timeout(30 seconds), interval(100 millis)) {
-      val log = session.readLog(stmtId , 2000L)
+      val log = session.readLog(stmtId, 2000L)
       log.mkString should include ("DAGScheduler")
     }
   }(rscConfWithLog)

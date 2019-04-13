@@ -20,9 +20,9 @@ package org.apache.livy.repl
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
+import com.google.common.base.Joiner
 import io.netty.channel.ChannelHandlerContext
 import org.apache.spark.SparkConf
-import com.google.common.base.Joiner
 
 import org.apache.livy.{EOLUtils, Logging}
 import org.apache.livy.client.common.ClientConf
@@ -69,7 +69,9 @@ class ReplDriver(conf: SparkConf, livyConf: RSCConf)
 
   def handle(ctx: ChannelHandlerContext, msg: BaseProtocol.GetJobLog): ReplJobResults = {
     val statements = session.statements.get(msg.id.toInt)
-    val output = session.readLog(msg.id.toInt, msg.size).map( x => s""""${Joiner.on("\n").join(x.iterator())} """" ).getOrElse("")
+    val output = session.readLog(msg.id.toInt, msg.size)
+                        .map( x => s""""${Joiner.on("\n").join(x.iterator())} """" )
+                        .getOrElse("")
     val resultStatements = statements.map{ item =>
       val newStat = new Statement(item.id, item.code, item.state.get(), output)
       newStat.updateProgress(item.progress)

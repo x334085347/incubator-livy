@@ -1,14 +1,13 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,10 +25,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.session.OperationLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.livy.rsc.RSCConf;
 
@@ -38,7 +37,7 @@ import org.apache.livy.rsc.RSCConf;
  */
 public class LogManager {
 
-    private final static Log LOG = LogFactory.getLog(LogManager.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(LogManager.class);
 
     public static final String prefix = "livy-";
 
@@ -76,14 +75,19 @@ public class LogManager {
 
     private void initialize(RSCConf rscConf) {
         String operationLogLocation = rscConf.get(RSCConf.Entry.LOGGING_OPERATION_LOG_LOCATION);
-        this.rootDirPath = operationLogLocation + File.separator + prefix + rscConf.get(RSCConf.Entry.SESSION_ID);
-        isOperationLogEnabled = rscConf.getBoolean(RSCConf.Entry.LOGGING_OPERATION_ENABLED) && new File(operationLogLocation).isDirectory();
+        this.rootDirPath = operationLogLocation + File.separator +
+                prefix + rscConf.get(RSCConf.Entry.SESSION_ID);
+        isOperationLogEnabled = rscConf.getBoolean(RSCConf.Entry.LOGGING_OPERATION_ENABLED)
+                && new File(operationLogLocation).isDirectory();
         String logLevel = rscConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL);
         if(isOperationLogEnabled){
             hiveConf = new HiveConf();
-            hiveConf.setBoolVar(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_ENABLED, isOperationLogEnabled);
-            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LOG_LOCATION.varname, operationLogLocation);
-            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LEVEL.varname, logLevel);
+            hiveConf.setBoolVar(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_ENABLED,
+                    isOperationLogEnabled);
+            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LOG_LOCATION.varname,
+                    operationLogLocation);
+            hiveConf.set(HiveConf.ConfVars.HIVE_SERVER2_LOGGING_OPERATION_LEVEL.varname,
+                    logLevel);
             File rootDir = new File(this.rootDirPath);
             if (!rootDir.exists()) {
                 rootDir.mkdir();
@@ -103,37 +107,37 @@ public class LogManager {
                     File operationLogFile = new File(
                             rootDirPath,
                             statementId);
-                    // create log file
                     try {
                         if (operationLogFile.exists()) {
-                            LOG.warn("The operation log file should not exist, but it is already there: " +
+                            LOG.warn("The operation log file should not exist," +
+                                            " but it is already there: {}" ,
                                     operationLogFile.getAbsolutePath());
                             operationLogFile.delete();
                         }
                         if (!operationLogFile.createNewFile()) {
-                            // the log file already exists and cannot be deleted.
-                            // If it can be read/written, keep its contents and use it.
                             if (!operationLogFile.canRead() || !operationLogFile.canWrite()) {
-                                LOG.warn("The already existed operation log file cannot be recreated, " +
-                                        "and it cannot be read or written: " + operationLogFile.getAbsolutePath());
+                                LOG.warn(
+                                        "The operation log file can't be recreated," +
+                                        "or it cannot be read or written: {}",
+                                        operationLogFile.getAbsolutePath());
                                 return;
                             }
                         }
                     } catch (Exception e) {
-                        LOG.warn("Unable to create operation log file: " + operationLogFile.getAbsolutePath(), e);
+                        LOG.warn(
+                                String.format("Unable to create operation log file: %s" ,
+                                        operationLogFile.getAbsolutePath()), e);
                         return;
                     }
-
-                    // create OperationLog object with above log file
                     try {
                         operationLog = new OperationLog(statementId, operationLogFile, hiveConf);
                         logs.put(statementId, operationLog);
                     } catch (FileNotFoundException e) {
-                        LOG.warn("Unable to instantiate OperationLog object for operation: " +
-                                statementId, e);
+                        LOG.warn(String.format(
+                                "Unable to instantiate OperationLog object for operation: %s " ,
+                                statementId), e);
                         return;
                     }
-
                 }
             }
             if(operationLog!=null) {

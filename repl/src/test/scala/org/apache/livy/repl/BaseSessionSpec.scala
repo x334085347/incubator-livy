@@ -39,7 +39,8 @@ abstract class BaseSessionSpec(kind: Kind)
 
   implicit val formats = DefaultFormats
 
-  private val defaultRscConf = new RSCConf(new Properties()).set(RSCConf.Entry.SESSION_KIND, kind.toString)
+  private val defaultRscConf = new RSCConf(new Properties())
+    .set(RSCConf.Entry.SESSION_KIND, kind.toString)
 
   private val sparkConf = new SparkConf()
 
@@ -56,7 +57,8 @@ abstract class BaseSessionSpec(kind: Kind)
     withConfSession(testCode)()
   }
 
-  protected def withConfSession(testCode: Session => Any)(rscConf: RSCConf = defaultRscConf): Unit = {
+  protected def withConfSession(testCode: Session => Any)
+                               (rscConf: RSCConf = defaultRscConf): Unit = {
     val stateChangedCalled = new AtomicInteger()
     val session =
       new Session(rscConf, sparkConf, None, { _ => stateChangedCalled.incrementAndGet() })

@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
+import org.apache.hadoop.hive.ql.session.OperationLog
 import org.apache.log4j.Logger
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.jackson.JsonMethods.{compact, render}
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
-import org.apache.hadoop.hive.ql.session.OperationLog
 
 import org.apache.livy.Logging
 import org.apache.livy.rsc.RSCConf
@@ -142,7 +142,8 @@ class Session(
       interpGroup.synchronized {
         interpGroup.put(Spark, sparkInterp)
       }
-      val ap = new LogDivertAppender(logManager, OperationLog.getLoggingLevel(livyConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL)))
+      val ap = new LogDivertAppender(logManager,
+        OperationLog.getLoggingLevel(livyConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL)))
       Logger.getRootLogger.addAppender(ap)
       changeState(SessionState.Idle)
       entries
@@ -158,7 +159,7 @@ class Session(
     _statements.toMap
   }
 
-  def readLog(statementId: Int , maxRows : Long ): Option[util.List[String]] = {
+  def readLog(statementId: Int, maxRows : Long ): Option[util.List[String]] = {
     Option(logManager.readLog(statementId.toString, maxRows))
   }
 
@@ -333,7 +334,7 @@ class Session(
             (ENAME -> f"Internal Error: ${e.getClass.getName}") ~
             (EVALUE -> e.getMessage) ~
             (TRACEBACK -> Seq.empty[String])
-      }finally {
+      } finally {
         logManager.removeCurrentOperationLog()
       }
     }.getOrElse {
@@ -375,7 +376,7 @@ class Session(
     statementId.toString
   }
 
-  def statmentRemoveCallBack(statementId: Int): Unit ={
+  def statmentRemoveCallBack(statementId: Int): Unit = {
     logManager.removeLog(statementId.toString)
   }
 }

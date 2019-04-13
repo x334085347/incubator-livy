@@ -495,7 +495,7 @@ class InteractiveSession(
     }
   }
 
-  def getStatementLog(stmtId: String , size : Long): Option[Statement] = {
+  def getStatementLog(stmtId: String, size : Long): Option[Statement] = {
     ensureActive()
     val r = client.get.getJobLog(stmtId, size).get()
     if (r.statements.length < 1) {
