@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.session.OperationLog;
+
 import org.apache.livy.rsc.RSCConf;
 
 /**
@@ -45,31 +46,28 @@ public class LogManager {
 
     private boolean isOperationLogEnabled = false;
 
-    private int numRetainedStatements;
-
     private HiveConf hiveConf;
 
-    private Map<String, OperationLog> logs = Collections.synchronizedMap(new LinkedHashMap<String, OperationLog>() {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, OperationLog> eldest) {
-            boolean isRemove = size() > numRetainedStatements;
-            if (isRemove) {
-                eldest.getValue().close();
-            }
-            return isRemove;
-        }
-    });
+    private Map<String, OperationLog> logs = Collections.synchronizedMap(new LinkedHashMap());
 
-    public List<String> readLog(String identifier, Long maxRow) throws SQLException {
-        OperationLog tl = this.getLog(identifier) ;
+    public List<String> readLog(String statementId, Long maxRow) throws SQLException {
+        OperationLog tl = this.getLog(statementId) ;
         if(tl!=null){
             return tl.readOperationLog(false, maxRow) ;
         }
         return null;
     }
 
-    public OperationLog getLog(String identifier) {
-        return logs.get(identifier);
+    public void removeLog(String statementId){
+        OperationLog operationLog=logs.get(statementId);
+        if(operationLog!=null){
+            operationLog.close();
+        }
+        logs.remove(statementId);
+    }
+
+    public OperationLog getLog(String statementId) {
+        return logs.get(statementId);
     }
 
     public LogManager(RSCConf rscConf) {
@@ -80,7 +78,6 @@ public class LogManager {
         String operationLogLocation = rscConf.get(RSCConf.Entry.LOGGING_OPERATION_LOG_LOCATION);
         this.rootDirPath = operationLogLocation + File.separator + prefix + rscConf.get(RSCConf.Entry.SESSION_ID);
         isOperationLogEnabled = rscConf.getBoolean(RSCConf.Entry.LOGGING_OPERATION_ENABLED) && new File(operationLogLocation).isDirectory();
-        numRetainedStatements = rscConf.getInt(RSCConf.Entry.RETAINED_STATEMENTS);
         String logLevel = rscConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL);
         if(isOperationLogEnabled){
             hiveConf = new HiveConf();
@@ -98,14 +95,14 @@ public class LogManager {
         OperationLog.removeCurrentOperationLog();
     }
 
-    public void registerOperationLog(String identifier) {
+    public void registerOperationLog(String statementId) {
         if (isOperationLogEnabled) {
-            OperationLog operationLog = logs.get(identifier);
+            OperationLog operationLog = logs.get(statementId);
             if (operationLog == null) {
                 synchronized (this) {
                     File operationLogFile = new File(
                             rootDirPath,
-                            identifier);
+                            statementId);
                     // create log file
                     try {
                         if (operationLogFile.exists()) {
@@ -129,17 +126,20 @@ public class LogManager {
 
                     // create OperationLog object with above log file
                     try {
-                        operationLog = new OperationLog(identifier, operationLogFile, hiveConf);
+                        operationLog = new OperationLog(statementId, operationLogFile, hiveConf);
+                        logs.put(statementId, operationLog);
                     } catch (FileNotFoundException e) {
                         LOG.warn("Unable to instantiate OperationLog object for operation: " +
-                                identifier, e);
+                                statementId, e);
                         return;
                     }
-                    logs.put(identifier, operationLog);
+
                 }
             }
-            // register this operationLog to current thread
-            OperationLog.setCurrentOperationLog(operationLog);
+            if(operationLog!=null) {
+                // register this operationLog to current thread
+                OperationLog.setCurrentOperationLog(operationLog);
+            }
         }
     }
 

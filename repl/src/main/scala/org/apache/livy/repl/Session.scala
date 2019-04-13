@@ -29,6 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
+import org.apache.log4j.Logger
 import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.jackson.JsonMethods.{compact, render}
 import org.json4s.DefaultFormats
@@ -70,14 +71,18 @@ class Session(
 
   private var _state: SessionState = SessionState.NotStarted
 
-  private val _logManager = new LogManager(livyConf)
+  private val logManager = new LogManager(livyConf)
 
   // Number of statements kept in driver's memory
   private val numRetainedStatements = livyConf.getInt(RSCConf.Entry.RETAINED_STATEMENTS)
 
   private val _statements = new JLinkedHashMap[Int, Statement] {
     protected override def removeEldestEntry(eldest: Entry[Int, Statement]): Boolean = {
-      size() > numRetainedStatements
+      val isRemove = size() > numRetainedStatements
+      if(isRemove){
+        statmentRemoveCallBack(eldest.getKey)
+      }
+      isRemove
     }
   }.asScala
 
@@ -137,8 +142,8 @@ class Session(
       interpGroup.synchronized {
         interpGroup.put(Spark, sparkInterp)
       }
-      val ap = new LogDivertAppender(_logManager, OperationLog.getLoggingLevel(livyConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL)))
-      org.apache.log4j.Logger.getRootLogger.addAppender(ap)
+      val ap = new LogDivertAppender(logManager, OperationLog.getLoggingLevel(livyConf.get(RSCConf.Entry.LOGGING_OPERATION_LEVEL)))
+      Logger.getRootLogger.addAppender(ap)
       changeState(SessionState.Idle)
       entries
     }(interpreterExecutor)
@@ -154,7 +159,7 @@ class Session(
   }
 
   def readLog(statementId: Int , maxRows : Long ): Option[util.List[String]] = {
-    Option(_logManager.readLog(statementId.toString, maxRows))
+    Option(logManager.readLog(statementId.toString, maxRows))
   }
 
   def execute(code: String, codeType: String = null): Int = {
@@ -237,7 +242,7 @@ class Session(
     interpreterExecutor.shutdown()
     cancelExecutor.shutdown()
     interpGroup.values.foreach(_.close())
-    _logManager.shutdown()
+    logManager.shutdown()
   }
 
   /**
@@ -281,7 +286,7 @@ class Session(
     }
     val resultInJson = interp.map { i =>
       try {
-        _logManager.registerOperationLog( executionCount.toString )
+        logManager.registerOperationLog( executionCount.toString )
         i.execute(code) match {
           case Interpreter.ExecuteSuccess(data) =>
             transitToIdle()
@@ -329,7 +334,7 @@ class Session(
             (EVALUE -> e.getMessage) ~
             (TRACEBACK -> Seq.empty[String])
       }finally {
-        _logManager.removeCurrentOperationLog()
+        logManager.removeCurrentOperationLog()
       }
     }.getOrElse {
       transitToIdle()
@@ -368,5 +373,9 @@ class Session(
 
   private def statementIdToJobGroup(statementId: Int): String = {
     statementId.toString
+  }
+
+  def statmentRemoveCallBack(statementId: Int): Unit ={
+    logManager.removeLog(statementId.toString)
   }
 }
