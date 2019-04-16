@@ -262,7 +262,7 @@ class Python2InterpreterSpec extends PythonBaseInterpreterSpec {
 
   // Scalastyle is treating unicode escape as non ascii characters. Turn off the check.
   // scalastyle:off non.ascii.character.disallowed
-  it should "print unicode correctly" in withInterpreter { intp =>
+  ignore should "print unicode correctly" in withInterpreter { intp =>
     intp.execute("print(u\"\u263A\")") should equal(Interpreter.ExecuteSuccess(
       TEXT_PLAIN -> "\u263A"
     ))
